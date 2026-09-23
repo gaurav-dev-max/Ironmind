@@ -1,0 +1,583 @@
+  <script>
+    const foodDB = [
+      { keys: ["egg", "eggs", "boiled egg"], unit: "piece", cal: 72, p: 6.3, c: 0.4 },
+      { keys: ["egg white", "egg whites"], unit: "piece", cal: 17, p: 3.6, c: 0.2 },
+      { keys: ["chicken", "chicken breast"], unit: "100g", cal: 165, p: 31, c: 0 },
+      { keys: ["whey", "protein powder", "whey protein"], unit: "scoop", cal: 125, p: 25, c: 3 },
+      { keys: ["paneer", "cottage cheese"], unit: "100g", cal: 265, p: 18, c: 3 },
+      { keys: ["tofu"], unit: "100g", cal: 83, p: 10, c: 2 },
+      { keys: ["roti", "chapati", "phulka"], unit: "piece", cal: 85, p: 3, c: 18 },
+      { keys: ["rice", "white rice", "cooked rice"], unit: "100g", cal: 130, p: 2.7, c: 28 },
+      { keys: ["oats", "oatmeal"], unit: "100g", cal: 389, p: 16.9, c: 66 },
+      { keys: ["milk"], unit: "100ml", cal: 58, p: 3.1, c: 4.8 },
+      { keys: ["banana"], unit: "piece", cal: 89, p: 1.1, c: 23 },
+      { keys: ["peanut butter"], unit: "tablespoon", cal: 95, p: 4, c: 3.5 },
+      { keys: ["almonds", "badam"], unit: "piece", cal: 7, p: 0.3, c: 0.2 },
+      { keys: ["dal", "lentils"], unit: "100g", cal: 116, p: 9, c: 20 }
+    ];
+
+    const defaultSplits = [
+      { name: "Chest & Triceps", recs: ["Flat Barbell Bench Press", "Incline Dumbbell Press", "Cable Chest Fly", "Tricep Pushdown"] },
+      { name: "Back & Biceps", recs: ["Conventional Deadlift", "Barbell Bent-Over Row", "Lat Pulldown", "Cable Bicep Curl"] },
+      { name: "Legs & Core", recs: ["Barbell Back Squat", "Romanian Deadlift", "Leg Press", "Hanging Leg Raise"] },
+      { name: "Shoulders & Arms", recs: ["Overhead Press", "Dumbbell Lateral Raise", "Incline Dumbbell Curl", "Skullcrusher"] }
+    ];
+
+    const exerciseCatalog = [
+      "Flat Barbell Bench Press", "Incline Dumbbell Press", "Cable Chest Fly", 
+      "Tricep Pushdown", "Conventional Deadlift", "Barbell Bent-Over Row", 
+      "Lat Pulldown", "Cable Bicep Curl", "Barbell Back Squat", 
+      "Romanian Deadlift", "Leg Press", "Hanging Leg Raise", 
+      "Overhead Press", "Dumbbell Lateral Raise", "Skullcrusher", "Incline Dumbbell Curl"
+    ];
+
+    let splits = JSON.parse(localStorage.getItem('iron_splits') || 'null') || defaultSplits;
+    let activeSession = JSON.parse(localStorage.getItem('iron_active_session') || 'null') || [
+      { exercise: "Flat Barbell Bench Press", sets: [{ weight: 60, reps: 8 }] }
+    ];
+
+    let dietTargets = JSON.parse(localStorage.getItem('iron_diet_targets') || 'null') || {
+      calories: 2800, protein: 180, carbs: 320, fats: 75
+    };
+
+    let todayMeals = JSON.parse(localStorage.getItem('iron_daily_meals') || '[]');
+    let waterConsumed = parseInt(localStorage.getItem('iron_water') || '0', 10);
+    let sessionStartTime = Date.now();
+
+    const tabGym = document.getElementById('tab-nav-gym');
+    const tabFuel = document.getElementById('tab-nav-fuel');
+    const tabFocus = document.getElementById('tab-nav-focus');
+    const panelGym = document.getElementById('panel-gym');
+    const panelFuel = document.getElementById('panel-fuel');
+    const panelFocus = document.getElementById('panel-focus');
+
+    function resetTabs() {
+      [tabGym, tabFuel, tabFocus].forEach(t => t.classList.remove('active'));
+      [panelGym, panelFuel, panelFocus].forEach(p => p.classList.remove('active'));
+    }
+
+    tabGym.addEventListener('click', () => { resetTabs(); tabGym.classList.add('active'); panelGym.classList.add('active'); });
+    tabFuel.addEventListener('click', () => { resetTabs(); tabFuel.classList.add('active'); panelFuel.classList.add('active'); });
+    tabFocus.addEventListener('click', () => { resetTabs(); tabFocus.classList.add('active'); panelFocus.classList.add('active'); });
+
+    const toast = document.getElementById('toast');
+    function triggerToast(text) {
+      toast.textContent = text;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    function triggerChime(freq = 660) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch (err) {}
+    }
+
+    let restHandle = null;
+    let restSeconds = 0;
+    const restClock = document.getElementById('rest-clock');
+    const restStatus = document.getElementById('rest-status');
+
+    function formatTime(s) {
+      const m = String(Math.floor(s / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    function startRestTimer(seconds) {
+      clearInterval(restHandle);
+      restSeconds = seconds;
+      restStatus.textContent = "REST TIMER • RUNNING";
+      restStatus.style.color = "var(--emerald)";
+      restClock.textContent = formatTime(restSeconds);
+
+      restHandle = setInterval(() => {
+        restSeconds--;
+        if (restSeconds <= 0) {
+          clearInterval(restHandle);
+          restStatus.textContent = "REST COMPLETE";
+          restStatus.style.color = "var(--rose)";
+          restClock.textContent = "00:00";
+          triggerChime(800);
+        } else {
+          restClock.textContent = formatTime(restSeconds);
+        }
+      }, 1000);
+    }
+
+    document.getElementById('btn-rest-60').addEventListener('click', () => startRestTimer(60));
+    document.getElementById('btn-rest-90').addEventListener('click', () => startRestTimer(90));
+    document.getElementById('btn-rest-120').addEventListener('click', () => startRestTimer(120));
+    document.getElementById('btn-rest-stop').addEventListener('click', () => {
+      clearInterval(restHandle);
+      restStatus.textContent = "REST TIMER • IDLE";
+      restStatus.style.color = "var(--text-muted)";
+      restClock.textContent = "00:00";
+    });
+
+    const splitSelector = document.getElementById('split-selector');
+    const recsContainer = document.getElementById('recommendations-container');
+    const manualExSelect = document.getElementById('manual-ex-select');
+    const sessionContainer = document.getElementById('session-exercises-container');
+    const metricTonnage = document.getElementById('metric-tonnage');
+    const metricCalories = document.getElementById('metric-calories');
+
+    function populateSplitDropdown() {
+      splitSelector.innerHTML = '';
+      splits.forEach((s, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = s.name;
+        splitSelector.appendChild(opt);
+      });
+      renderRecommendations();
+    }
+
+    function renderRecommendations() {
+      recsContainer.innerHTML = '';
+      const activeSplit = splits[splitSelector.value] || splits[0];
+      activeSplit.recs.forEach(name => {
+        const chip = document.createElement('div');
+        chip.className = 'rec-chip';
+        chip.textContent = `+ ${name}`;
+        chip.addEventListener('click', () => addExerciseToSession(name));
+        recsContainer.appendChild(chip);
+      });
+    }
+
+    splitSelector.addEventListener('change', renderRecommendations);
+
+    function populateManualExercises() {
+      manualExSelect.innerHTML = '';
+      exerciseCatalog.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        manualExSelect.appendChild(opt);
+      });
+    }
+
+    function addExerciseToSession(exerciseName) {
+      activeSession.push({ exercise: exerciseName, sets: [{ weight: 60, reps: 8 }] });
+      renderSession();
+      triggerToast(`Added ${exerciseName}`);
+    }
+
+    document.getElementById('btn-add-exercise').addEventListener('click', () => {
+      const name = manualExSelect.value;
+      if (name) addExerciseToSession(name);
+    });
+
+    function renderSession() {
+      sessionContainer.innerHTML = '';
+      let totalVolume = 0;
+      let totalSetsCount = 0;
+
+      activeSession.forEach((exItem, exIdx) => {
+        const block = document.createElement('div');
+        block.className = 'exercise-block';
+
+        let setsHTML = '';
+        exItem.sets.forEach((s, sIdx) => {
+          totalVolume += (s.weight * s.reps);
+          totalSetsCount++;
+          const est1RM = Math.round(s.weight * (1 + s.reps / 30));
+
+          setsHTML += `
+            <div class="set-row">
+              <div class="set-top">
+                <span class="set-tag">SET ${sIdx + 1}</span>
+                <span class="set-1rm">Est 1RM: ${est1RM} kg</span>
+              </div>
+              <div class="steppers-grid">
+                <div class="step-box">
+                  <button class="step-btn" data-act="w-sub" data-ex="${exIdx}" data-set="${sIdx}">-</button>
+                  <span class="step-text">${s.weight} kg</span>
+                  <button class="step-btn" data-act="w-add" data-ex="${exIdx}" data-set="${sIdx}">+</button>
+                </div>
+                <div class="step-box">
+                  <button class="step-btn" data-act="r-sub" data-ex="${exIdx}" data-set="${sIdx}">-</button>
+                  <span class="step-text">${s.reps} reps</span>
+                  <button class="step-btn" data-act="r-add" data-ex="${exIdx}" data-set="${sIdx}">+</button>
+                </div>
+              </div>
+              <div style="display:flex; gap:6px; margin-top:2px;">
+                <button class="btn-action btn-emerald" data-act="quick-rest" style="flex:1; padding:4px; font-size:0.75rem;">
+                  Log & 90s Rest
+                </button>
+                <button class="btn-action" data-act="del-set" data-ex="${exIdx}" data-set="${sIdx}" style="color:var(--rose); padding:4px 10px;">
+                  ✕
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        block.innerHTML = `
+          <div class="ex-header">
+            <span class="ex-title">${exItem.exercise}</span>
+            <button class="btn-action" data-act="del-ex" data-ex="${exIdx}" style="color:var(--rose); padding:4px 8px; font-size:0.75rem;">
+              Remove
+            </button>
+          </div>
+          <div class="set-list">${setsHTML}</div>
+          <button class="btn-action btn-emerald" data-act="add-set" data-ex="${exIdx}" style="padding:6px; font-size:0.8rem; margin-top:4px;">
+            + Add Working Set
+          </button>
+        `;
+        sessionContainer.appendChild(block);
+      });
+
+      metricTonnage.textContent = `${totalVolume} kg`;
+      const hours = Math.max((Date.now() - sessionStartTime) / 3600000, 0.05);
+      const burn = Math.round(6.0 * 70 * hours + (totalSetsCount * 4));
+      metricCalories.textContent = `${burn} kcal`;
+
+      localStorage.setItem('iron_active_session', JSON.stringify(activeSession));
+    }
+
+    sessionContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      const exIdx = parseInt(btn.dataset.ex, 10);
+      const setIdx = parseInt(btn.dataset.set, 10);
+
+      if (act === 'w-add') activeSession[exIdx].sets[setIdx].weight += 2.5;
+      if (act === 'w-sub') activeSession[exIdx].sets[setIdx].weight = Math.max(0, activeSession[exIdx].sets[setIdx].weight - 2.5);
+      if (act === 'r-add') activeSession[exIdx].sets[setIdx].reps += 1;
+      if (act === 'r-sub') activeSession[exIdx].sets[setIdx].reps = Math.max(0, activeSession[exIdx].sets[setIdx].reps - 1);
+      if (act === 'del-set') activeSession[exIdx].sets.splice(setIdx, 1);
+      if (act === 'del-ex') activeSession.splice(exIdx, 1);
+
+      if (act === 'add-set') {
+        const last = activeSession[exIdx].sets[activeSession[exIdx].sets.length - 1] || { weight: 60, reps: 8 };
+        activeSession[exIdx].sets.push({ weight: last.weight, reps: last.reps });
+      }
+
+      if (act === 'quick-rest') {
+        startRestTimer(90);
+        triggerToast("Set Logged. Rest Clock Running.");
+      }
+      renderSession();
+    });
+
+    document.getElementById('btn-commit').addEventListener('click', () => {
+      const logs = JSON.parse(localStorage.getItem('iron_workout_logs') || '[]');
+      logs.push({
+        date: new Date().toISOString(),
+        split: splitSelector.options[splitSelector.selectedIndex]?.textContent || "Training Split",
+        tonnage: metricTonnage.textContent,
+        session: activeSession
+      });
+      localStorage.setItem('iron_workout_logs', JSON.stringify(logs));
+      triggerToast("Workout Committed to Storage");
+    });
+
+    const modalPlate = document.getElementById('modal-plate');
+    const plateSummary = document.getElementById('plate-summary');
+
+    document.getElementById('btn-open-plate').addEventListener('click', () => {
+      const firstSetWeight = activeSession[0]?.sets[0]?.weight || 60;
+      let remainder = firstSetWeight - 20.0;
+
+      if (remainder < 0) {
+        plateSummary.innerHTML = `Bar weight is 20 kg.<br>Target (${firstSetWeight} kg) is below bar weight.`;
+      } else if (remainder === 0) {
+        plateSummary.innerHTML = `Empty 20 kg Barbell.<br><strong>No plates needed.</strong>`;
+      } else {
+        let perSide = remainder / 2;
+        const plateDenoms = [25, 20, 15, 10, 5, 2.5, 1.25];
+        let results = [];
+        results.push(`Target: <strong>${firstSetWeight} kg</strong>`);
+        results.push(`Per Side: <strong>${perSide} kg</strong><br>`);
+
+        plateDenoms.forEach(p => {
+          const count = Math.floor(perSide / p);
+          if (count > 0) {
+            results.push(`• <strong>${p} kg</strong> plate × ${count}`);
+            perSide = (perSide % p).toFixed(2);
+          }
+        });
+        plateSummary.innerHTML = results.join('<br>');
+      }
+      modalPlate.classList.add('show');
+    });
+
+    document.getElementById('btn-close-plate').addEventListener('click', () => modalPlate.classList.remove('show'));
+
+    const modalSplit = document.getElementById('modal-split');
+    const inputSplitName = document.getElementById('input-split-name');
+    const inputSplitRecs = document.getElementById('input-split-recs');
+
+    document.getElementById('btn-custom-day').addEventListener('click', () => {
+      inputSplitName.value = ''; inputSplitRecs.value = ''; modalSplit.classList.add('show');
+    });
+    document.getElementById('btn-cancel-split').addEventListener('click', () => modalSplit.classList.remove('show'));
+
+    document.getElementById('btn-save-split').addEventListener('click', () => {
+      const name = inputSplitName.value.trim();
+      const recs = inputSplitRecs.value.split(',').map(r => r.trim()).filter(r => r.length > 0);
+      if (!name) return;
+      splits.push({ name, recs: recs.length > 0 ? recs : ["Flat Barbell Bench Press", "Barbell Back Squat"] });
+      localStorage.setItem('iron_splits', JSON.stringify(splits));
+      populateSplitDropdown();
+      splitSelector.value = splits.length - 1;
+      renderRecommendations();
+      modalSplit.classList.remove('show');
+      triggerToast("Custom Split Created");
+    });
+
+    const inTargetCal = document.getElementById('in-target-calories');
+    const inTargetPro = document.getElementById('in-target-protein');
+    const inTargetCarb = document.getElementById('in-target-carbs');
+    const inTargetFat = document.getElementById('in-target-fats');
+
+    const calConsumedEl = document.getElementById('cal-consumed');
+    const calRemainingEl = document.getElementById('cal-remaining');
+    const calProgressEl = document.getElementById('cal-progress');
+
+    const pConsumedEl = document.getElementById('p-consumed');
+    const cConsumedEl = document.getElementById('c-consumed');
+    const fConsumedEl = document.getElementById('f-consumed');
+
+    const pProgressEl = document.getElementById('p-progress');
+    const cProgressEl = document.getElementById('c-progress');
+    const fProgressEl = document.getElementById('f-progress');
+
+    const waterDisplayEl = document.getElementById('water-display');
+    const mealsFeedEl = document.getElementById('meals-feed');
+
+    function syncDashboard() {
+      dietTargets.calories = parseInt(inTargetCal.value, 10) || 2800;
+      dietTargets.protein = parseInt(inTargetPro.value, 10) || 180;
+      dietTargets.carbs = parseInt(inTargetCarb.value, 10) || 320;
+      dietTargets.fats = parseInt(inTargetFat.value, 10) || 75;
+
+      let totalCal = 0; let totalPro = 0; let totalCarb = 0;
+
+      todayMeals.forEach(m => {
+        totalCal += (m.cal || 0); totalPro += (m.pro || 0); totalCarb += (m.carb || 0);
+      });
+
+      calConsumedEl.textContent = totalCal;
+      const rem = dietTargets.calories - totalCal;
+      calRemainingEl.textContent = rem >= 0 ? `${rem} left` : `${Math.abs(rem)} over`;
+      const calPercent = Math.min(100, Math.round((totalCal / dietTargets.calories) * 100));
+      calProgressEl.style.width = `${calPercent}%`;
+
+      pConsumedEl.textContent = totalPro;
+      cConsumedEl.textContent = totalCarb;
+      fConsumedEl.textContent = "0";
+
+      pProgressEl.style.width = `${Math.min(100, Math.round((totalPro / dietTargets.protein) * 100))}%`;
+      cProgressEl.style.width = `${Math.min(100, Math.round((totalCarb / dietTargets.carbs) * 100))}%`;
+
+      waterDisplayEl.textContent = `${waterConsumed} ml`;
+
+      mealsFeedEl.innerHTML = '';
+      if (todayMeals.length === 0) {
+        mealsFeedEl.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.8rem; padding:12px;">No meals logged today</div>`;
+      } else {
+        todayMeals.forEach((meal, idx) => {
+          const item = document.createElement('div');
+          item.className = 'meal-item';
+          item.innerHTML = `
+            <div class="meal-meta">
+              <span class="meal-title">${meal.name}</span>
+              <span class="meal-details">${meal.cal} kcal • ${meal.pro}g P • ${meal.carb}g C</span>
+            </div>
+            <button class="step-btn" data-act="del-meal" data-idx="${idx}" style="color:var(--rose); width:28px; height:28px;">✕</button>
+          `;
+          mealsFeedEl.appendChild(item);
+        });
+      }
+
+      localStorage.setItem('iron_daily_meals', JSON.stringify(todayMeals));
+      localStorage.setItem('iron_diet_targets', JSON.stringify(dietTargets));
+      localStorage.setItem('iron_water', waterConsumed.toString());
+    }
+
+    [inTargetCal, inTargetPro, inTargetCarb, inTargetFat].forEach(inp => {
+      inp.addEventListener('input', syncDashboard);
+    });
+
+    const inFoodQuery = document.getElementById('in-food-query');
+    const inMealCal = document.getElementById('in-meal-cal');
+    const inMealPro = document.getElementById('in-meal-pro');
+    const inMealCarb = document.getElementById('in-meal-carb');
+    const detectorStatus = document.getElementById('detector-status');
+
+    inFoodQuery.addEventListener('input', () => {
+      const query = inFoodQuery.value.toLowerCase().trim();
+      if (!query) {
+        detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)"; return;
+      }
+
+      const numMatch = query.match(/(\d+(\.\d+)?)/);
+      const quantity = numMatch ? parseFloat(numMatch[1]) : 1;
+
+      let detectedFood = null;
+      for (const item of foodDB) {
+        for (const key of item.keys) {
+          if (query.includes(key)) { detectedFood = item; break; }
+        }
+        if (detectedFood) break;
+      }
+
+      if (detectedFood) {
+        let factor = quantity;
+        if (detectedFood.unit === "100g" || detectedFood.unit === "100ml") factor = quantity / 100;
+
+        inMealCal.value = Math.round(detectedFood.cal * factor);
+        inMealPro.value = Math.round(detectedFood.p * factor);
+        inMealCarb.value = Math.round(detectedFood.c * factor);
+
+      detectorStatus.textContent = `DETECTED: ${quantity}${detectedFood.unit === '100g' ? 'g' : ''}`;
+        detectorStatus.style.color = "var(--cyan)";
+      } else {
+        detectorStatus.textContent = "CUSTOM INPUT"; detectorStatus.style.color = "var(--text-muted)";
+      }
+    });
+
+    document.getElementById('btn-submit-meal').addEventListener('click', () => {
+      const title = inFoodQuery.value.trim() || 'Custom Meal';
+      const cal = parseInt(inMealCal.value, 10) || 0;
+      const pro = parseInt(inMealPro.value, 10) || 0;
+      const carb = parseInt(inMealCarb.value, 10) || 0;
+
+      todayMeals.unshift({ name: title, cal, pro, carb, time: new Date().toLocaleTimeString() });
+
+      inFoodQuery.value = ''; inMealCal.value = ''; inMealPro.value = ''; inMealCarb.value = '';
+      detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)";
+
+      syncDashboard();
+      triggerToast("Meal Logged");
+    });
+
+    mealsFeedEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.act === 'del-meal') {
+        const idx = parseInt(btn.dataset.idx, 10);
+        todayMeals.splice(idx, 1);
+        syncDashboard();
+      }
+    });
+
+    document.getElementById('btn-water-250').addEventListener('click', () => { waterConsumed += 250; syncDashboard(); triggerToast("+250ml Logged"); });
+    document.getElementById('btn-water-500').addEventListener('click', () => { waterConsumed += 500; syncDashboard(); triggerToast("+500ml Logged"); });
+    document.getElementById('btn-water-reset').addEventListener('click', () => { waterConsumed = 0; syncDashboard(); });
+    document.getElementById('btn-clear-day').addEventListener('click', () => { todayMeals = []; waterConsumed = 0; syncDashboard(); triggerToast("Day Reset"); });
+
+    let focusHandle = null;
+    let focusSeconds = 25 * 60;
+    let isFocusActive = false;
+    let distractionLeaks = 0;
+
+    const focusClock = document.getElementById('focus-clock');
+    const focusStatus = document.getElementById('focus-status');
+    const btnFocusToggle = document.getElementById('btn-focus-toggle');
+    const distVal = document.getElementById('metric-distractions');
+
+    btnFocusToggle.addEventListener('click', () => {
+      if (!isFocusActive) {
+        isFocusActive = true;
+        btnFocusToggle.textContent = "Pause";
+        focusStatus.textContent = "FOCUS • ACTIVE";
+        focusHandle = setInterval(() => {
+          focusSeconds--;
+          if (focusSeconds <= 0) {
+            clearInterval(focusHandle);
+            isFocusActive = false;
+            btnFocusToggle.textContent = "Start";
+            focusStatus.textContent = "COMPLETE";
+            triggerChime(900);
+          }
+          focusClock.textContent = formatTime(focusSeconds);
+        }, 1000);
+      } else {
+        clearInterval(focusHandle);
+        isFocusActive = false;
+        btnFocusToggle.textContent = "Start";
+        focusStatus.textContent = "FOCUS • PAUSED";
+      }
+    });
+
+    document.getElementById('btn-proto-25').addEventListener('click', () => {
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60; focusStatus.textContent = "POMODORO READY"; focusClock.textContent = formatTime(focusSeconds);
+    });
+
+    document.getElementById('btn-proto-90').addEventListener('click', () => {
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 90 * 60; focusStatus.textContent = "ULTRADIAN READY"; focusClock.textContent = formatTime(focusSeconds);
+    });
+
+    document.getElementById('btn-focus-reset').addEventListener('click', () => {
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60; focusStatus.textContent = "FOCUS • READY"; focusClock.textContent = formatTime(focusSeconds);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isFocusActive) {
+        distractionLeaks++;
+        distVal.textContent = distractionLeaks;
+        triggerChime(220);
+      }
+    });
+
+    let noiseCtx = null;
+    let noiseSrc = null;
+    let noiseOn = false;
+    const btnNoise = document.getElementById('btn-noise');
+
+    btnNoise.addEventListener('click', () => {
+      if (!noiseCtx) noiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (noiseCtx.state === 'suspended') noiseCtx.resume();
+
+      if (noiseOn) {
+        if (noiseSrc) { noiseSrc.stop(); noiseSrc.disconnect(); }
+        noiseOn = false;
+        btnNoise.textContent = "White Noise: OFF";
+      } else {
+        const bufferSize = noiseCtx.sampleRate * 2;
+        const noiseBuffer = noiseCtx.createBuffer(1, bufferSize, noiseCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+        noiseSrc = noiseCtx.createBufferSource();
+        noiseSrc.buffer = noiseBuffer;
+        noiseSrc.loop = true;
+        const gain = noiseCtx.createGain();
+        gain.gain.setValueAtTime(0.02, noiseCtx.currentTime);
+        noiseSrc.connect(gain);
+        gain.connect(noiseCtx.destination);
+        noiseSrc.start();
+        noiseOn = true;
+        btnNoise.textContent = "White Noise: ON";
+      }
+    });
+
+    populateSplitDropdown();
+    populateManualExercises();
+    renderSession();
+    inTargetCal.value = dietTargets.calories;
+    inTargetPro.value = dietTargets.protein;
+    inTargetCarb.value = dietTargets.carbs;
+    inTargetFat.value = dietTargets.fats;
+    syncDashboard();
+  </script>
+</body>
+</html>
