@@ -1,26 +1,31 @@
-    <!-- TAB 1: WORKOUT ENGINE -->
+    <!-- TAB 1: STRENGTH HUB -->
     <div id="panel-gym" class="view-panel active">
+      
+      <!-- SPLIT SELECTION -->
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span class="card-label">Training Split / Day</span>
-          <button class="btn-action" id="btn-custom-day" style="padding:4px 8px; font-size:0.75rem;">+ New Split</button>
+          <button class="btn-action" id="btn-custom-day" style="width:auto; padding:4px 10px; font-size:0.75rem;">+ New Split</button>
         </div>
-        <select id="split-selector" style="margin-top:6px;"></select>
-        <span class="card-label" style="display:block; margin-top:10px;">Recommended For Today (Tap to Add)</span>
-        <div class="chip-scroll" id="recommendations-container"></div>
+        <select id="split-selector"></select>
+
+        <span class="card-label" style="display:block; margin-top:12px; margin-bottom:6px;">Recommended For Today (Tap to Add)</span>
+        <div class="rec-scroll" id="recommendations-container"></div>
       </div>
 
+      <!-- SESSION METRICS -->
       <div class="telemetry-row">
         <div class="stat-card">
           <div class="card-label">Session Tonnage</div>
-          <div class="stat-val" id="metric-tonnage">0 kg</div>
+          <div class="stat-val" id="metric-tonnage" style="color:var(--emerald);">0 kg</div>
         </div>
         <div class="stat-card">
           <div class="card-label">Est. Calories</div>
-          <div class="stat-val" id="metric-calories">0 kcal</div>
+          <div class="stat-val" id="metric-calories" style="color:var(--cyan);">0 kcal</div>
         </div>
       </div>
 
+      <!-- REST TIMER -->
       <div class="card timer-card">
         <div class="timer-status" id="rest-status">REST TIMER • IDLE</div>
         <div class="timer-display" id="rest-clock">00:00</div>
@@ -32,20 +37,27 @@
         </div>
       </div>
 
-      <div class="card" style="display:flex; flex-direction:column; gap:8px;">
-        <div style="display:flex; gap:8px;">
-          <select id="manual-ex-select" style="flex:1;"></select>
-          <button class="btn-action btn-emerald" id="btn-add-exercise" style="padding:0 14px;">+ Add Movement</button>
+      <!-- ACTIVE EXERCISES CONTAINER -->
+      <div class="card">
+        <span class="card-label">Add Movement to Session</span>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <select id="manual-ex-select"></select>
+          <button class="btn-action btn-emerald" id="btn-add-exercise" style="width:auto; white-space:nowrap; padding:0 14px;">+ Add Movement</button>
         </div>
-        <button class="btn-action" id="btn-open-plate" style="width:100%; font-size:0.8rem;">
-          🧮 Calculate Barbell Plates (Set 1)
-        </button>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-action" id="btn-open-plate" style="font-size:0.75rem; padding:8px;">🧮 Barbell Plates (Set 1)</button>
+          <button class="btn-action" id="btn-calc-warmup" style="font-size:0.75rem; padding:8px; color:var(--cyan);">🔥 Warmup Pyramid</button>
+        </div>
       </div>
 
       <div id="session-exercises-container" style="display:flex; flex-direction:column; gap:12px;"></div>
 
-      <button class="btn-action btn-emerald" id="btn-commit" style="padding:14px; font-size:0.95rem;">
+      <button class="btn-action btn-emerald" id="btn-commit" style="padding:14px; font-size:0.95rem; margin-top:6px;">
         Commit Training Session
       </button>
-    </div>
 
+      <div style="display:flex; justify-content:center; gap:12px; margin-top:4px;">
+        <button id="btn-export-json" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer;">Backup Data (JSON)</button>
+      </div>
+
+    </div>
