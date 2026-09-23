@@ -1,0 +1,51 @@
+    <!-- TAB 1: WORKOUT ENGINE -->
+    <div id="panel-gym" class="view-panel active">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="card-label">Training Split / Day</span>
+          <button class="btn-action" id="btn-custom-day" style="padding:4px 8px; font-size:0.75rem;">+ New Split</button>
+        </div>
+        <select id="split-selector" style="margin-top:6px;"></select>
+        <span class="card-label" style="display:block; margin-top:10px;">Recommended For Today (Tap to Add)</span>
+        <div class="chip-scroll" id="recommendations-container"></div>
+      </div>
+
+      <div class="telemetry-row">
+        <div class="stat-card">
+          <div class="card-label">Session Tonnage</div>
+          <div class="stat-val" id="metric-tonnage">0 kg</div>
+        </div>
+        <div class="stat-card">
+          <div class="card-label">Est. Calories</div>
+          <div class="stat-val" id="metric-calories">0 kcal</div>
+        </div>
+      </div>
+
+      <div class="card timer-card">
+        <div class="timer-status" id="rest-status">REST TIMER • IDLE</div>
+        <div class="timer-display" id="rest-clock">00:00</div>
+        <div class="timer-btns">
+          <button class="btn-timer" id="btn-rest-60">+60s</button>
+          <button class="btn-timer" id="btn-rest-90">+90s</button>
+          <button class="btn-timer" id="btn-rest-120">+120s</button>
+          <button class="btn-timer btn-stop" id="btn-rest-stop">Stop</button>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <select id="manual-ex-select" style="flex:1;"></select>
+          <button class="btn-action btn-emerald" id="btn-add-exercise" style="padding:0 14px;">+ Add Movement</button>
+        </div>
+        <button class="btn-action" id="btn-open-plate" style="width:100%; font-size:0.8rem;">
+          🧮 Calculate Barbell Plates (Set 1)
+        </button>
+      </div>
+
+      <div id="session-exercises-container" style="display:flex; flex-direction:column; gap:12px;"></div>
+
+      <button class="btn-action btn-emerald" id="btn-commit" style="padding:14px; font-size:0.95rem;">
+        Commit Training Session
+      </button>
+    </div>
+
