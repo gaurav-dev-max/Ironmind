@@ -1,0 +1,89 @@
+    <!-- TAB 2: NUTRITION & AUTO-DETECTOR -->
+    <div id="panel-fuel" class="view-panel">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <div>
+            <span class="card-label">Daily Fuel Consumption (Tap Target to Edit)</span>
+            <div style="font-family:var(--font-mono); font-size:1.8rem; font-weight:800; color:var(--cyan); margin-top:4px; display:flex; align-items:center;">
+              <span id="cal-consumed">0</span>&nbsp;/&nbsp;
+              <input type="number" id="in-target-calories" class="inline-target-input" value="2800">
+              <span style="font-size:0.9rem; color:var(--text-muted); margin-left:4px;">kcal</span>
+            </div>
+          </div>
+          <span style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted);" id="cal-remaining">2800 left</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="cal-progress" style="width:0%; background:var(--cyan);"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="card-label">Macronutrient Targets (Tap Target to Edit)</span>
+        <div class="macro-cards-grid" style="margin-top:10px;">
+          <div class="macro-stat-box">
+            <span class="card-label" style="color:var(--emerald);">Protein</span>
+            <div class="macro-stat-val">
+              <span id="p-consumed">0</span>/<input type="number" id="in-target-protein" class="inline-macro-input" value="180">g
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="p-progress" style="width:0%; background:var(--emerald);"></div>
+            </div>
+          </div>
+          <div class="macro-stat-box">
+            <span class="card-label" style="color:var(--gold);">Carbs</span>
+            <div class="macro-stat-val">
+              <span id="c-consumed">0</span>/<input type="number" id="in-target-carbs" class="inline-macro-input" value="320">g
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="c-progress" style="width:0%; background:var(--gold);"></div>
+            </div>
+          </div>
+          <div class="macro-stat-box">
+            <span class="card-label" style="color:var(--rose);">Fats</span>
+            <div class="macro-stat-val">
+              <span id="f-consumed">0</span>/<input type="number" id="in-target-fats" class="inline-macro-input" value="75">g
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="f-progress" style="width:0%; background:var(--rose);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="water-tracker">
+        <div>
+          <span class="card-label">Hydration</span>
+          <div style="font-family:var(--font-mono); font-size:1.2rem; font-weight:700; color:#38bdf8;" id="water-display">0 ml</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-action" id="btn-water-250" style="padding:6px 12px; font-size:0.75rem;">+250 ml</button>
+          <button class="btn-action" id="btn-water-500" style="padding:6px 12px; font-size:0.75rem;">+500 ml</button>
+          <button class="btn-action" id="btn-water-reset" style="color:var(--rose); padding:6px 10px;">✕</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="card-label">Smart Food & Macro Auto-Detector</span>
+          <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--emerald);" id="detector-status">AI READY</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <input type="text" id="in-food-query" placeholder="Type food & qty (e.g. 200g chicken breast, 4 eggs, 2 roti, 1 scoop whey)">
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+            <input type="number" id="in-meal-cal" placeholder="Calories (kcal)">
+            <input type="number" id="in-meal-pro" placeholder="Protein (g)">
+            <input type="number" id="in-meal-carb" placeholder="Carbs (g)">
+          </div>
+          <button class="btn-action btn-cyan" id="btn-submit-meal">Commit Meal to Log</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="card-label">Today's Meals</span>
+          <button class="btn-action" id="btn-clear-day" style="color:var(--rose); font-size:0.7rem; padding:4px 8px;">Reset Day</button>
+        </div>
+        <div class="meal-feed" id="meals-feed"></div>
+      </div>
+    </div>
+
