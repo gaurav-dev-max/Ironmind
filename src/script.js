@@ -1,3 +1,4 @@
+
   <script>
     const foodDB = [
       { keys: ["egg", "eggs", "boiled egg"], unit: "piece", cal: 72, p: 6.3, c: 0.4, f: 5.0 },
@@ -33,7 +34,7 @@
 
     let splits = JSON.parse(localStorage.getItem('iron_splits') || 'null') || defaultSplits;
     let activeSession = JSON.parse(localStorage.getItem('iron_active_session') || 'null') || [
-      { exercise: "Flat Barbell Bench Press", sets: [{ weight: 60, reps: 8 }] }
+      { exercise: "Flat Barbell Bench Press", sets: [{ weight: 60, reps: 8, done: false }] }
     ];
 
     let dietTargets = JSON.parse(localStorage.getItem('iron_diet_targets') || 'null') || {
@@ -111,6 +112,7 @@
           restStatus.style.color = "var(--rose)";
           restClock.textContent = "00:00";
           triggerChime(800);
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         } else {
           restClock.textContent = formatTime(restSeconds);
         }
@@ -170,7 +172,7 @@
     }
 
     function addExerciseToSession(exerciseName) {
-      activeSession.push({ exercise: exerciseName, sets: [{ weight: 60, reps: 8 }] });
+      activeSession.push({ exercise: exerciseName, sets: [{ weight: 60, reps: 8, done: false }] });
       renderSession();
       triggerToast(`Added ${exerciseName}`);
     }
@@ -179,6 +181,15 @@
       const name = manualExSelect.value;
       if (name) addExerciseToSession(name);
     });
+
+    function getPreviousExerciseStats(exerciseName) {
+      const logs = JSON.parse(localStorage.getItem('iron_workout_logs') || '[]');
+      for (let i = logs.length - 1; i >= 0; i--) {
+        const found = logs[i].session?.find(s => s.exercise === exerciseName);
+        if (found && found.sets?.length > 0) return found.sets;
+      }
+      return null;
+    }
 
     function renderSession() {
       sessionContainer.innerHTML = '';
@@ -189,16 +200,23 @@
         const block = document.createElement('div');
         block.className = 'exercise-block';
 
+        const prevSets = getPreviousExerciseStats(exItem.exercise);
+
         let setsHTML = '';
         exItem.sets.forEach((s, sIdx) => {
           totalVolume += (s.weight * s.reps);
           totalSetsCount++;
           const est1RM = Math.round(s.weight * (1 + s.reps / 30));
+          const prevSet = prevSets && prevSets[sIdx] ? prevSets[sIdx] : null;
+          const ghostText = prevSet ? `Prev: ${prevSet.weight}kg × ${prevSet.reps}` : `Prev: --`;
 
           setsHTML += `
-            <div class="set-row">
+            <div class="set-row ${s.done ? 'completed' : ''}">
               <div class="set-top">
-                <span class="set-tag">SET ${sIdx + 1}</span>
+                <div class="set-meta-group">
+                  <span class="set-tag">SET ${sIdx + 1}</span>
+                  <span class="ghost-target">${ghostText}</span>
+                </div>
                 <span class="set-1rm">Est 1RM: ${est1RM} kg</span>
               </div>
               <div class="steppers-grid">
@@ -214,8 +232,8 @@
                 </div>
               </div>
               <div style="display:flex; gap:6px; margin-top:2px;">
-                <button class="btn-action btn-emerald" data-act="quick-rest" style="flex:1; padding:4px; font-size:0.75rem;">
-                  Log & 90s Rest
+                <button class="btn-action ${s.done ? '' : 'btn-emerald'}" data-act="toggle-complete" data-ex="${exIdx}" data-set="${sIdx}" style="flex:1; padding:6px; font-size:0.75rem;">
+                  ${s.done ? '✔ Set Logged' : 'Log & Auto-Rest (90s)'}
                 </button>
                 <button class="btn-action" data-act="del-set" data-ex="${exIdx}" data-set="${sIdx}" style="color:var(--rose); padding:4px 10px;">
                   ✕
@@ -264,12 +282,17 @@
 
       if (act === 'add-set') {
         const last = activeSession[exIdx].sets[activeSession[exIdx].sets.length - 1] || { weight: 60, reps: 8 };
-        activeSession[exIdx].sets.push({ weight: last.weight, reps: last.reps });
+        activeSession[exIdx].sets.push({ weight: last.weight, reps: last.reps, done: false });
       }
 
-      if (act === 'quick-rest') {
-        startRestTimer(90);
-        triggerToast("Set Logged. Rest Clock Running.");
+      if (act === 'toggle-complete') {
+        const currentSet = activeSession[exIdx].sets[setIdx];
+        currentSet.done = !currentSet.done;
+        if (currentSet.done) {
+          startRestTimer(90);
+          triggerToast("Set Logged. Rest Clock Running.");
+          if (navigator.vibrate) navigator.vibrate(40);
+        }
       }
       renderSession();
     });
@@ -284,6 +307,22 @@
       });
       localStorage.setItem('iron_workout_logs', JSON.stringify(logs));
       triggerToast("Workout Committed to Storage");
+    });
+
+    document.getElementById('btn-export-json').addEventListener('click', () => {
+      const state = {
+        logs: JSON.parse(localStorage.getItem('iron_workout_logs') || '[]'),
+        meals: JSON.parse(localStorage.getItem('iron_daily_meals') || '[]'),
+        splits: JSON.parse(localStorage.getItem('iron_splits') || '[]'),
+        targets: dietTargets
+      };
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IronMind_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
 
     const modalPlate = document.getElementById('modal-plate');
@@ -317,6 +356,28 @@
     });
 
     document.getElementById('btn-close-plate').addEventListener('click', () => modalPlate.classList.remove('show'));
+
+    const modalWarmup = document.getElementById('modal-warmup');
+    const warmupSummary = document.getElementById('warmup-summary');
+
+    document.getElementById('btn-calc-warmup').addEventListener('click', () => {
+      const targetWeight = activeSession[0]?.sets[0]?.weight || 60;
+      const p50 = Math.round((targetWeight * 0.5) / 2.5) * 2.5;
+      const p70 = Math.round((targetWeight * 0.7) / 2.5) * 2.5;
+      const p85 = Math.round((targetWeight * 0.85) / 2.5) * 2.5;
+
+      warmupSummary.innerHTML = `
+        Target Work Set: <strong>${targetWeight} kg</strong><br><br>
+        1. 20 kg (Empty Bar) × 10 reps<br>
+        2. <strong>${p50} kg</strong> (50%) × 5 reps<br>
+        3. <strong>${p70} kg</strong> (70%) × 3 reps<br>
+        4. <strong>${p85} kg</strong> (85%) × 1 rep (Potentiation)<br><br>
+        <em>Rest 2-3 mins before Set 1.</em>
+      `;
+      modalWarmup.classList.add('show');
+    });
+
+    document.getElementById('btn-close-warmup').addEventListener('click', () => modalWarmup.classList.remove('show'));
 
     const modalSplit = document.getElementById('modal-split');
     const inputSplitName = document.getElementById('input-split-name');
@@ -422,7 +483,7 @@
       inp.addEventListener('input', syncDashboard);
     });
 
-        const inFoodQuery = document.getElementById('in-food-query');
+    const inFoodQuery = document.getElementById('in-food-query');
     const inMealCal = document.getElementById('in-meal-cal');
     const inMealPro = document.getElementById('in-meal-pro');
     const inMealCarb = document.getElementById('in-meal-carb');
@@ -432,13 +493,8 @@
     inFoodQuery.addEventListener('input', () => {
       const query = inFoodQuery.value.toLowerCase().trim();
       if (!query) {
-        detectorStatus.textContent = "AI READY";
-        detectorStatus.style.color = "var(--emerald)";
-        inMealCal.value = '';
-        inMealPro.value = '';
-        inMealCarb.value = '';
-        inMealFat.value = '';
-        return;
+        detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)";
+        inMealCal.value = ''; inMealPro.value = ''; inMealCarb.value = ''; inMealFat.value = ''; return;
       }
 
       const numMatch = query.match(/(\d+(\.\d+)?)/);
@@ -447,19 +503,14 @@
       let detectedFood = null;
       for (const item of foodDB) {
         for (const key of item.keys) {
-          if (query.includes(key)) {
-            detectedFood = item;
-            break;
-          }
+          if (query.includes(key)) { detectedFood = item; break; }
         }
         if (detectedFood) break;
       }
 
       if (detectedFood) {
         let factor = quantity;
-        if (detectedFood.unit === "100g" || detectedFood.unit === "100ml") {
-          factor = quantity / 100;
-        }
+        if (detectedFood.unit === "100g" || detectedFood.unit === "100ml") factor = quantity / 100;
 
         inMealCal.value = Math.round(detectedFood.cal * factor);
         inMealPro.value = Math.round(detectedFood.p * factor);
@@ -469,8 +520,7 @@
         detectorStatus.textContent = `DETECTED: ${quantity}${detectedFood.unit === '100g' ? 'g' : ''}`;
         detectorStatus.style.color = "var(--cyan)";
       } else {
-        detectorStatus.textContent = "CUSTOM INPUT";
-        detectorStatus.style.color = "var(--text-muted)";
+        detectorStatus.textContent = "CUSTOM INPUT"; detectorStatus.style.color = "var(--text-muted)";
       }
     });
 
@@ -481,22 +531,10 @@
       const carb = parseInt(inMealCarb.value, 10) || 0;
       const fat = parseInt(inMealFat.value, 10) || 0;
 
-      todayMeals.unshift({
-        name: title,
-        cal,
-        pro,
-        carb,
-        fat,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
+      todayMeals.unshift({ name: title, cal, pro, carb, fat, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
-      inFoodQuery.value = '';
-      inMealCal.value = '';
-      inMealPro.value = '';
-      inMealCarb.value = '';
-      inMealFat.value = '';
-      detectorStatus.textContent = "AI READY";
-      detectorStatus.style.color = "var(--emerald)";
+      inFoodQuery.value = ''; inMealCal.value = ''; inMealPro.value = ''; inMealCarb.value = ''; inMealFat.value = '';
+      detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)";
 
       syncDashboard();
       triggerToast("Meal Logged");
@@ -512,29 +550,10 @@
       }
     });
 
-    document.getElementById('btn-water-250').addEventListener('click', () => {
-      waterConsumed += 250;
-      syncDashboard();
-      triggerToast("+250ml Logged");
-    });
-
-    document.getElementById('btn-water-500').addEventListener('click', () => {
-      waterConsumed += 500;
-      syncDashboard();
-      triggerToast("+500ml Logged");
-    });
-
-    document.getElementById('btn-water-reset').addEventListener('click', () => {
-      waterConsumed = 0;
-      syncDashboard();
-    });
-
-    document.getElementById('btn-clear-day').addEventListener('click', () => {
-      todayMeals = [];
-      waterConsumed = 0;
-      syncDashboard();
-      triggerToast("Day Reset");
-    });
+    document.getElementById('btn-water-250').addEventListener('click', () => { waterConsumed += 250; syncDashboard(); triggerToast("+250ml Logged"); });
+    document.getElementById('btn-water-500').addEventListener('click', () => { waterConsumed += 500; syncDashboard(); triggerToast("+500ml Logged"); });
+    document.getElementById('btn-water-reset').addEventListener('click', () => { waterConsumed = 0; syncDashboard(); });
+    document.getElementById('btn-clear-day').addEventListener('click', () => { todayMeals = []; waterConsumed = 0; syncDashboard(); triggerToast("Day Reset"); });
 
     let focusHandle = null;
     let focusSeconds = 25 * 60;
@@ -571,30 +590,18 @@
     });
 
     document.getElementById('btn-proto-25').addEventListener('click', () => {
-      clearInterval(focusHandle);
-      isFocusActive = false;
-      btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60;
-      focusStatus.textContent = "POMODORO READY";
-      focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60; focusStatus.textContent = "POMODORO READY"; focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.getElementById('btn-proto-90').addEventListener('click', () => {
-      clearInterval(focusHandle);
-      isFocusActive = false;
-      btnFocusToggle.textContent = "Start";
-      focusSeconds = 90 * 60;
-      focusStatus.textContent = "ULTRADIAN READY";
-      focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 90 * 60; focusStatus.textContent = "ULTRADIAN READY"; focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.getElementById('btn-focus-reset').addEventListener('click', () => {
-      clearInterval(focusHandle);
-      isFocusActive = false;
-      btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60;
-      focusStatus.textContent = "FOCUS • READY";
-      focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60; focusStatus.textContent = "FOCUS • READY"; focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -605,37 +612,78 @@
       }
     });
 
-    let noiseCtx = null;
-    let noiseSrc = null;
-    let noiseOn = false;
-    const btnNoise = document.getElementById('btn-noise');
+    // MULTI-MODE SYNTHESIZER (White, Brown, 40Hz Gamma)
+    let audioCtx = null;
+    let activeSource = null;
+    let soundMode = 0; // 0: OFF, 1: White Noise, 2: Brown Noise, 3: 40Hz Gamma
+    const btnSoundscape = document.getElementById('btn-soundscape');
 
-    btnNoise.addEventListener('click', () => {
-      if (!noiseCtx) noiseCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (noiseCtx.state === 'suspended') noiseCtx.resume();
+    function stopAudio() {
+      if (activeSource) {
+        try { activeSource.stop(); activeSource.disconnect(); } catch (e) {}
+        activeSource = null;
+      }
+    }
 
-      if (noiseOn) {
-        if (noiseSrc) {
-          noiseSrc.stop();
-          noiseSrc.disconnect();
+    btnSoundscape.addEventListener('click', () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      soundMode = (soundMode + 1) % 4;
+      stopAudio();
+
+      if (soundMode === 0) {
+        btnSoundscape.textContent = "Audio: OFF";
+      } else if (soundMode === 1) {
+        btnSoundscape.textContent = "White Noise";
+        const bufferSize = audioCtx.sampleRate * 2;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer; src.loop = true;
+        const gain = audioCtx.createGain(); gain.gain.value = 0.02;
+        src.connect(gain); gain.connect(audioCtx.destination);
+        src.start();
+        activeSource = src;
+      } else if (soundMode === 2) {
+        btnSoundscape.textContent = "Brown Noise";
+        const bufferSize = audioCtx.sampleRate * 2;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          data[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = data[i];
+          data[i] *= 3.5;
         }
-        noiseOn = false;
-        btnNoise.textContent = "White Noise: OFF";
-      } else {
-        const bufferSize = noiseCtx.sampleRate * 2;
-        const noiseBuffer = noiseCtx.createBuffer(1, bufferSize, noiseCtx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
-        noiseSrc = noiseCtx.createBufferSource();
-        noiseSrc.buffer = noiseBuffer;
-        noiseSrc.loop = true;
-        const gain = noiseCtx.createGain();
-        gain.gain.setValueAtTime(0.02, noiseCtx.currentTime);
-        noiseSrc.connect(gain);
-        gain.connect(noiseCtx.destination);
-        noiseSrc.start();
-        noiseOn = true;
-        btnNoise.textContent = "White Noise: ON";
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer; src.loop = true;
+        const gain = audioCtx.createGain(); gain.gain.value = 0.06;
+        src.connect(gain); gain.connect(audioCtx.destination);
+        src.start();
+        activeSource = src;
+      } else if (soundMode === 3) {
+        btnSoundscape.textContent = "40Hz Gamma Focus";
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime); // Carrier tone
+        gain.gain.value = 0.05;
+
+        // Modulate at 40Hz
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfo.frequency.value = 40;
+        lfoGain.gain.value = 0.04;
+        lfo.connect(gain.gain);
+        lfo.start();
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        activeSource = osc;
       }
     });
 
