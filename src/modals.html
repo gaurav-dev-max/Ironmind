@@ -1,23 +1,32 @@
-  <!-- MODAL: BARBELL PLATE CALCULATOR -->
+  <!-- PLATE CALCULATOR MODAL -->
   <div class="modal-backdrop" id="modal-plate">
     <div class="modal-window">
-      <div style="font-weight:700; font-size:0.95rem;">Olympic Plate Breakdown</div>
-      <div style="font-size:0.8rem; color:var(--text-muted);">Standard 20kg Barbell Included</div>
-      <div class="plate-output" id="plate-summary">Loading...</div>
+      <div style="font-weight:700; font-size:0.95rem;">Barbell Plate Loading</div>
+      <div class="plate-output" id="plate-summary">Calculating...</div>
       <button class="btn-action" id="btn-close-plate">Done</button>
     </div>
   </div>
 
-  <!-- MODAL: CUSTOM SPLIT BUILDER -->
+  <!-- WARMUP PYRAMID MODAL -->
+  <div class="modal-backdrop" id="modal-warmup">
+    <div class="modal-window">
+      <div style="font-weight:700; font-size:0.95rem;">Compound Warmup Schedule</div>
+      <div class="plate-output" id="warmup-summary">Calculating...</div>
+      <button class="btn-action btn-emerald" id="btn-close-warmup">Ready to Lift</button>
+    </div>
+  </div>
+
+  <!-- CUSTOM SPLIT MODAL -->
   <div class="modal-backdrop" id="modal-split">
     <div class="modal-window">
-      <div style="font-weight:700; font-size:0.95rem;">Create Custom Training Split</div>
-      <input type="text" id="input-split-name" placeholder="e.g. Arms & Calves">
-      <input type="text" id="input-split-recs" placeholder="Recommendations (e.g. Barbell Curl, Skullcrusher, Calf Raise)">
-      <div style="display:flex; gap:8px;">
-        <button class="btn-action" id="btn-cancel-split" style="flex:1;">Cancel</button>
-        <button class="btn-action btn-emerald" id="btn-save-split" style="flex:1;">Save</button>
+      <div style="font-weight:700; font-size:0.95rem;">Create Custom Split</div>
+      <input type="text" id="input-split-name" placeholder="Split Name (e.g. Pull Day)">
+      <input type="text" id="input-split-recs" placeholder="Comma-separated (Deadlift, Lat Pulldown...)">
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button class="btn-action btn-emerald" id="btn-save-split">Save Split</button>
+        <button class="btn-action" id="btn-cancel-split">Cancel</button>
       </div>
     </div>
   </div>
-  
+
+  <div id="toast">Ready</div>
