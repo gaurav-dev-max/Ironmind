@@ -1,19 +1,19 @@
   <script>
     const foodDB = [
-      { keys: ["egg", "eggs", "boiled egg"], unit: "piece", cal: 72, p: 6.3, c: 0.4 },
-      { keys: ["egg white", "egg whites"], unit: "piece", cal: 17, p: 3.6, c: 0.2 },
-      { keys: ["chicken", "chicken breast"], unit: "100g", cal: 165, p: 31, c: 0 },
-      { keys: ["whey", "protein powder", "whey protein"], unit: "scoop", cal: 125, p: 25, c: 3 },
-      { keys: ["paneer", "cottage cheese"], unit: "100g", cal: 265, p: 18, c: 3 },
-      { keys: ["tofu"], unit: "100g", cal: 83, p: 10, c: 2 },
-      { keys: ["roti", "chapati", "phulka"], unit: "piece", cal: 85, p: 3, c: 18 },
-      { keys: ["rice", "white rice", "cooked rice"], unit: "100g", cal: 130, p: 2.7, c: 28 },
-      { keys: ["oats", "oatmeal"], unit: "100g", cal: 389, p: 16.9, c: 66 },
-      { keys: ["milk"], unit: "100ml", cal: 58, p: 3.1, c: 4.8 },
-      { keys: ["banana"], unit: "piece", cal: 89, p: 1.1, c: 23 },
-      { keys: ["peanut butter"], unit: "tablespoon", cal: 95, p: 4, c: 3.5 },
-      { keys: ["almonds", "badam"], unit: "piece", cal: 7, p: 0.3, c: 0.2 },
-      { keys: ["dal", "lentils"], unit: "100g", cal: 116, p: 9, c: 20 }
+      { keys: ["egg", "eggs", "boiled egg"], unit: "piece", cal: 72, p: 6.3, c: 0.4, f: 5.0 },
+      { keys: ["egg white", "egg whites"], unit: "piece", cal: 17, p: 3.6, c: 0.2, f: 0.1 },
+      { keys: ["chicken", "chicken breast"], unit: "100g", cal: 165, p: 31, c: 0, f: 3.6 },
+      { keys: ["whey", "protein powder", "whey protein"], unit: "scoop", cal: 125, p: 25, c: 3, f: 1.5 },
+      { keys: ["paneer", "cottage cheese"], unit: "100g", cal: 265, p: 18, c: 3, f: 20 },
+      { keys: ["tofu"], unit: "100g", cal: 83, p: 10, c: 2, f: 4.8 },
+      { keys: ["roti", "chapati", "phulka"], unit: "piece", cal: 85, p: 3, c: 18, f: 0.5 },
+      { keys: ["rice", "white rice", "cooked rice"], unit: "100g", cal: 130, p: 2.7, c: 28, f: 0.3 },
+      { keys: ["oats", "oatmeal"], unit: "100g", cal: 389, p: 16.9, c: 66, f: 6.9 },
+      { keys: ["milk"], unit: "100ml", cal: 58, p: 3.1, c: 4.8, f: 3.2 },
+      { keys: ["banana"], unit: "piece", cal: 89, p: 1.1, c: 23, f: 0.3 },
+      { keys: ["peanut butter"], unit: "tablespoon", cal: 95, p: 4, c: 3.5, f: 8 },
+      { keys: ["almonds", "badam"], unit: "piece", cal: 7, p: 0.3, c: 0.2, f: 0.6 },
+      { keys: ["dal", "lentils"], unit: "100g", cal: 116, p: 9, c: 20, f: 0.4 }
     ];
 
     const defaultSplits = [
@@ -347,15 +347,10 @@
 
     const calConsumedEl = document.getElementById('cal-consumed');
     const calRemainingEl = document.getElementById('cal-remaining');
-    const calProgressEl = document.getElementById('cal-progress');
 
     const pConsumedEl = document.getElementById('p-consumed');
     const cConsumedEl = document.getElementById('c-consumed');
     const fConsumedEl = document.getElementById('f-consumed');
-
-    const pProgressEl = document.getElementById('p-progress');
-    const cProgressEl = document.getElementById('c-progress');
-    const fProgressEl = document.getElementById('f-progress');
 
     const waterDisplayEl = document.getElementById('water-display');
     const mealsFeedEl = document.getElementById('meals-feed');
@@ -366,24 +361,37 @@
       dietTargets.carbs = parseInt(inTargetCarb.value, 10) || 320;
       dietTargets.fats = parseInt(inTargetFat.value, 10) || 75;
 
-      let totalCal = 0; let totalPro = 0; let totalCarb = 0;
+      let totalCal = 0; let totalPro = 0; let totalCarb = 0; let totalFat = 0;
 
       todayMeals.forEach(m => {
-        totalCal += (m.cal || 0); totalPro += (m.pro || 0); totalCarb += (m.carb || 0);
+        totalCal += (m.cal || 0);
+        totalPro += (m.pro || 0);
+        totalCarb += (m.carb || 0);
+        totalFat += (m.fat || 0);
       });
 
-      calConsumedEl.textContent = totalCal;
+      calConsumedEl.textContent = `${totalCal} kcal`;
       const rem = dietTargets.calories - totalCal;
       calRemainingEl.textContent = rem >= 0 ? `${rem} left` : `${Math.abs(rem)} over`;
-      const calPercent = Math.min(100, Math.round((totalCal / dietTargets.calories) * 100));
-      calProgressEl.style.width = `${calPercent}%`;
 
       pConsumedEl.textContent = totalPro;
       cConsumedEl.textContent = totalCarb;
-      fConsumedEl.textContent = "0";
+      fConsumedEl.textContent = totalFat;
 
-      pProgressEl.style.width = `${Math.min(100, Math.round((totalPro / dietTargets.protein) * 100))}%`;
-      cProgressEl.style.width = `${Math.min(100, Math.round((totalCarb / dietTargets.carbs) * 100))}%`;
+      const pctCal = Math.min(100, Math.round((totalCal / dietTargets.calories) * 100));
+      const pctPro = Math.min(100, Math.round((totalPro / dietTargets.protein) * 100));
+      const pctCarb = Math.min(100, Math.round((totalCarb / dietTargets.carbs) * 100));
+      const pctFat = Math.min(100, Math.round((totalFat / dietTargets.fats) * 100));
+
+      document.getElementById('pct-cal').textContent = `${pctCal}%`;
+      document.getElementById('pct-pro').textContent = `${pctPro}%`;
+      document.getElementById('pct-carb').textContent = `${pctCarb}%`;
+      document.getElementById('pct-fat').textContent = `${pctFat}%`;
+
+      document.getElementById('ring-cal').style.background = `conic-gradient(var(--emerald) ${pctCal * 3.6}deg, var(--surface-hover) ${pctCal * 3.6}deg)`;
+      document.getElementById('ring-pro').style.background = `conic-gradient(var(--cyan) ${pctPro * 3.6}deg, var(--surface-hover) ${pctPro * 3.6}deg)`;
+      document.getElementById('ring-carb').style.background = `conic-gradient(var(--gold) ${pctCarb * 3.6}deg, var(--surface-hover) ${pctCarb * 3.6}deg)`;
+      document.getElementById('ring-fat').style.background = `conic-gradient(var(--rose) ${pctFat * 3.6}deg, var(--surface-hover) ${pctFat * 3.6}deg)`;
 
       waterDisplayEl.textContent = `${waterConsumed} ml`;
 
@@ -397,7 +405,7 @@
           item.innerHTML = `
             <div class="meal-meta">
               <span class="meal-title">${meal.name}</span>
-              <span class="meal-details">${meal.cal} kcal • ${meal.pro}g P • ${meal.carb}g C</span>
+              <span class="meal-details">${meal.cal} kcal • ${meal.pro}g P • ${meal.carb}g C • ${meal.fat || 0}g F</span>
             </div>
             <button class="step-btn" data-act="del-meal" data-idx="${idx}" style="color:var(--rose); width:28px; height:28px;">✕</button>
           `;
@@ -414,16 +422,23 @@
       inp.addEventListener('input', syncDashboard);
     });
 
-    const inFoodQuery = document.getElementById('in-food-query');
+        const inFoodQuery = document.getElementById('in-food-query');
     const inMealCal = document.getElementById('in-meal-cal');
     const inMealPro = document.getElementById('in-meal-pro');
     const inMealCarb = document.getElementById('in-meal-carb');
+    const inMealFat = document.getElementById('in-meal-fat');
     const detectorStatus = document.getElementById('detector-status');
 
     inFoodQuery.addEventListener('input', () => {
       const query = inFoodQuery.value.toLowerCase().trim();
       if (!query) {
-        detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)"; return;
+        detectorStatus.textContent = "AI READY";
+        detectorStatus.style.color = "var(--emerald)";
+        inMealCal.value = '';
+        inMealPro.value = '';
+        inMealCarb.value = '';
+        inMealFat.value = '';
+        return;
       }
 
       const numMatch = query.match(/(\d+(\.\d+)?)/);
@@ -432,23 +447,30 @@
       let detectedFood = null;
       for (const item of foodDB) {
         for (const key of item.keys) {
-          if (query.includes(key)) { detectedFood = item; break; }
+          if (query.includes(key)) {
+            detectedFood = item;
+            break;
+          }
         }
         if (detectedFood) break;
       }
 
       if (detectedFood) {
         let factor = quantity;
-        if (detectedFood.unit === "100g" || detectedFood.unit === "100ml") factor = quantity / 100;
+        if (detectedFood.unit === "100g" || detectedFood.unit === "100ml") {
+          factor = quantity / 100;
+        }
 
         inMealCal.value = Math.round(detectedFood.cal * factor);
         inMealPro.value = Math.round(detectedFood.p * factor);
         inMealCarb.value = Math.round(detectedFood.c * factor);
+        inMealFat.value = Math.round((detectedFood.f || 0) * factor);
 
-      detectorStatus.textContent = `DETECTED: ${quantity}${detectedFood.unit === '100g' ? 'g' : ''}`;
+        detectorStatus.textContent = `DETECTED: ${quantity}${detectedFood.unit === '100g' ? 'g' : ''}`;
         detectorStatus.style.color = "var(--cyan)";
       } else {
-        detectorStatus.textContent = "CUSTOM INPUT"; detectorStatus.style.color = "var(--text-muted)";
+        detectorStatus.textContent = "CUSTOM INPUT";
+        detectorStatus.style.color = "var(--text-muted)";
       }
     });
 
@@ -457,11 +479,24 @@
       const cal = parseInt(inMealCal.value, 10) || 0;
       const pro = parseInt(inMealPro.value, 10) || 0;
       const carb = parseInt(inMealCarb.value, 10) || 0;
+      const fat = parseInt(inMealFat.value, 10) || 0;
 
-      todayMeals.unshift({ name: title, cal, pro, carb, time: new Date().toLocaleTimeString() });
+      todayMeals.unshift({
+        name: title,
+        cal,
+        pro,
+        carb,
+        fat,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
 
-      inFoodQuery.value = ''; inMealCal.value = ''; inMealPro.value = ''; inMealCarb.value = '';
-      detectorStatus.textContent = "AI READY"; detectorStatus.style.color = "var(--emerald)";
+      inFoodQuery.value = '';
+      inMealCal.value = '';
+      inMealPro.value = '';
+      inMealCarb.value = '';
+      inMealFat.value = '';
+      detectorStatus.textContent = "AI READY";
+      detectorStatus.style.color = "var(--emerald)";
 
       syncDashboard();
       triggerToast("Meal Logged");
@@ -477,10 +512,29 @@
       }
     });
 
-    document.getElementById('btn-water-250').addEventListener('click', () => { waterConsumed += 250; syncDashboard(); triggerToast("+250ml Logged"); });
-    document.getElementById('btn-water-500').addEventListener('click', () => { waterConsumed += 500; syncDashboard(); triggerToast("+500ml Logged"); });
-    document.getElementById('btn-water-reset').addEventListener('click', () => { waterConsumed = 0; syncDashboard(); });
-    document.getElementById('btn-clear-day').addEventListener('click', () => { todayMeals = []; waterConsumed = 0; syncDashboard(); triggerToast("Day Reset"); });
+    document.getElementById('btn-water-250').addEventListener('click', () => {
+      waterConsumed += 250;
+      syncDashboard();
+      triggerToast("+250ml Logged");
+    });
+
+    document.getElementById('btn-water-500').addEventListener('click', () => {
+      waterConsumed += 500;
+      syncDashboard();
+      triggerToast("+500ml Logged");
+    });
+
+    document.getElementById('btn-water-reset').addEventListener('click', () => {
+      waterConsumed = 0;
+      syncDashboard();
+    });
+
+    document.getElementById('btn-clear-day').addEventListener('click', () => {
+      todayMeals = [];
+      waterConsumed = 0;
+      syncDashboard();
+      triggerToast("Day Reset");
+    });
 
     let focusHandle = null;
     let focusSeconds = 25 * 60;
@@ -517,18 +571,30 @@
     });
 
     document.getElementById('btn-proto-25').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60; focusStatus.textContent = "POMODORO READY"; focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle);
+      isFocusActive = false;
+      btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60;
+      focusStatus.textContent = "POMODORO READY";
+      focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.getElementById('btn-proto-90').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 90 * 60; focusStatus.textContent = "ULTRADIAN READY"; focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle);
+      isFocusActive = false;
+      btnFocusToggle.textContent = "Start";
+      focusSeconds = 90 * 60;
+      focusStatus.textContent = "ULTRADIAN READY";
+      focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.getElementById('btn-focus-reset').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60; focusStatus.textContent = "FOCUS • READY"; focusClock.textContent = formatTime(focusSeconds);
+      clearInterval(focusHandle);
+      isFocusActive = false;
+      btnFocusToggle.textContent = "Start";
+      focusSeconds = 25 * 60;
+      focusStatus.textContent = "FOCUS • READY";
+      focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -549,7 +615,10 @@
       if (noiseCtx.state === 'suspended') noiseCtx.resume();
 
       if (noiseOn) {
-        if (noiseSrc) { noiseSrc.stop(); noiseSrc.disconnect(); }
+        if (noiseSrc) {
+          noiseSrc.stop();
+          noiseSrc.disconnect();
+        }
         noiseOn = false;
         btnNoise.textContent = "White Noise: OFF";
       } else {
