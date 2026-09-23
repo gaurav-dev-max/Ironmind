@@ -21,10 +21,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Make Build Script Executable & Run
+      - name: Compile Modular HTML Files
         run: |
-          chmod +x build.sh
-          ./build.sh
+          mkdir -p dist
+          cat src/head.html \
+              src/header.html \
+              src/gym.html \
+              src/nutrition.html \
+              src/focus.html \
+              src/nav.html \
+              src/modals.html \
+              src/script.js > dist/index.html
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
