@@ -1,31 +1,37 @@
     <!-- TAB 1: STRENGTH HUB -->
     <div id="panel-gym" class="view-panel active">
       
-      <!-- SPLIT SELECTION -->
+      <!-- SPLIT SELECTION & TIME CAP -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span class="card-label">Training Split / Day</span>
+          <span class="card-label">Training Split / Protocol</span>
           <button class="btn-action" id="btn-custom-day" style="width:auto; padding:4px 10px; font-size:0.75rem;">+ New Split</button>
         </div>
         <select id="split-selector"></select>
+
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <div class="badge-chip active" id="chip-time-free" style="flex:1;">Open Session</div>
+          <div class="badge-chip" id="chip-time-45" style="flex:1;">45m Time-Cap</div>
+          <div class="badge-chip" id="chip-time-60" style="flex:1;">60m Time-Cap</div>
+        </div>
 
         <span class="card-label" style="display:block; margin-top:12px; margin-bottom:6px;">Recommended For Today (Tap to Add)</span>
         <div class="rec-scroll" id="recommendations-container"></div>
       </div>
 
-      <!-- SESSION METRICS -->
+      <!-- SESSION TELEMETRY -->
       <div class="telemetry-row">
         <div class="stat-card">
           <div class="card-label">Session Tonnage</div>
           <div class="stat-val" id="metric-tonnage" style="color:var(--emerald);">0 kg</div>
         </div>
         <div class="stat-card">
-          <div class="card-label">Est. Calories</div>
-          <div class="stat-val" id="metric-calories" style="color:var(--cyan);">0 kcal</div>
+          <div class="card-label">Training Density</div>
+          <div class="stat-val" id="metric-density" style="color:var(--cyan);">0 kg/m</div>
         </div>
       </div>
 
-      <!-- REST TIMER -->
+      <!-- REST & WORKOUT CLOCK -->
       <div class="card timer-card">
         <div class="timer-status" id="rest-status">REST TIMER • IDLE</div>
         <div class="timer-display" id="rest-clock">00:00</div>
@@ -37,7 +43,7 @@
         </div>
       </div>
 
-      <!-- ACTIVE EXERCISES CONTAINER -->
+      <!-- MOVEMENT CONTROLS -->
       <div class="card">
         <span class="card-label">Add Movement to Session</span>
         <div style="display:flex; gap:8px; margin-top:8px;">
@@ -50,6 +56,7 @@
         </div>
       </div>
 
+      <!-- ACTIVE EXERCISE CARDS -->
       <div id="session-exercises-container" style="display:flex; flex-direction:column; gap:12px;"></div>
 
       <button class="btn-action btn-emerald" id="btn-commit" style="padding:14px; font-size:0.95rem; margin-top:6px;">
