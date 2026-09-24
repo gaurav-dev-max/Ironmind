@@ -1,4 +1,3 @@
-
   <script>
     const foodDB = [
       { keys: ["egg", "eggs", "boiled egg"], unit: "piece", cal: 72, p: 6.3, c: 0.4, f: 5.0 },
@@ -86,6 +85,7 @@
       } catch (err) {}
     }
 
+    // REST TIMER LOGIC
     let restHandle = null;
     let restSeconds = 0;
     const restClock = document.getElementById('rest-clock');
@@ -309,22 +309,6 @@
       triggerToast("Workout Committed to Storage");
     });
 
-    document.getElementById('btn-export-json').addEventListener('click', () => {
-      const state = {
-        logs: JSON.parse(localStorage.getItem('iron_workout_logs') || '[]'),
-        meals: JSON.parse(localStorage.getItem('iron_daily_meals') || '[]'),
-        splits: JSON.parse(localStorage.getItem('iron_splits') || '[]'),
-        targets: dietTargets
-      };
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `IronMind_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
     const modalPlate = document.getElementById('modal-plate');
     const plateSummary = document.getElementById('plate-summary');
 
@@ -357,28 +341,6 @@
 
     document.getElementById('btn-close-plate').addEventListener('click', () => modalPlate.classList.remove('show'));
 
-    const modalWarmup = document.getElementById('modal-warmup');
-    const warmupSummary = document.getElementById('warmup-summary');
-
-    document.getElementById('btn-calc-warmup').addEventListener('click', () => {
-      const targetWeight = activeSession[0]?.sets[0]?.weight || 60;
-      const p50 = Math.round((targetWeight * 0.5) / 2.5) * 2.5;
-      const p70 = Math.round((targetWeight * 0.7) / 2.5) * 2.5;
-      const p85 = Math.round((targetWeight * 0.85) / 2.5) * 2.5;
-
-      warmupSummary.innerHTML = `
-        Target Work Set: <strong>${targetWeight} kg</strong><br><br>
-        1. 20 kg (Empty Bar) × 10 reps<br>
-        2. <strong>${p50} kg</strong> (50%) × 5 reps<br>
-        3. <strong>${p70} kg</strong> (70%) × 3 reps<br>
-        4. <strong>${p85} kg</strong> (85%) × 1 rep (Potentiation)<br><br>
-        <em>Rest 2-3 mins before Set 1.</em>
-      `;
-      modalWarmup.classList.add('show');
-    });
-
-    document.getElementById('btn-close-warmup').addEventListener('click', () => modalWarmup.classList.remove('show'));
-
     const modalSplit = document.getElementById('modal-split');
     const inputSplitName = document.getElementById('input-split-name');
     const inputSplitRecs = document.getElementById('input-split-recs');
@@ -401,6 +363,7 @@
       triggerToast("Custom Split Created");
     });
 
+    // NUTRITION & MACROS LOGIC
     const inTargetCal = document.getElementById('in-target-calories');
     const inTargetPro = document.getElementById('in-target-protein');
     const inTargetCarb = document.getElementById('in-target-carbs');
@@ -555,29 +518,90 @@
     document.getElementById('btn-water-reset').addEventListener('click', () => { waterConsumed = 0; syncDashboard(); });
     document.getElementById('btn-clear-day').addEventListener('click', () => { todayMeals = []; waterConsumed = 0; syncDashboard(); triggerToast("Day Reset"); });
 
+    // CA FOCUS ENGINE & ICAI 3-HOUR SIMULATOR
     let focusHandle = null;
     let focusSeconds = 25 * 60;
+    let initialFocusSeconds = 25 * 60;
     let isFocusActive = false;
     let distractionLeaks = 0;
+    let studyMode = 'practical';
 
     const focusClock = document.getElementById('focus-clock');
     const focusStatus = document.getElementById('focus-status');
     const btnFocusToggle = document.getElementById('btn-focus-toggle');
     const distVal = document.getElementById('metric-distractions');
+    const studyHoursEl = document.getElementById('metric-study-hours');
+    const chipPractical = document.getElementById('chip-mode-practical');
+    const chipTheory = document.getElementById('chip-mode-theory');
+    const focusPaper = document.getElementById('focus-paper');
+    const focusAnchor = document.getElementById('focus-anchor');
+    const revisionQueueEl = document.getElementById('revision-queue');
+
+    let totalStudySeconds = parseInt(localStorage.getItem('iron_net_study_sec') || '0', 10);
+
+    function updateStudyDisplay() {
+      const hours = (totalStudySeconds / 3600).toFixed(1);
+      if (studyHoursEl) studyHoursEl.textContent = `${hours} hrs`;
+    }
+    updateStudyDisplay();
+
+    chipPractical.addEventListener('click', () => {
+      studyMode = 'practical';
+      chipPractical.classList.add('active');
+      chipTheory.classList.remove('active');
+    });
+
+    chipTheory.addEventListener('click', () => {
+      studyMode = 'theory';
+      chipTheory.classList.add('active');
+      chipPractical.classList.remove('active');
+    });
+
+    function setFocusPreset(seconds, label) {
+      clearInterval(focusHandle);
+      isFocusActive = false;
+      btnFocusToggle.textContent = "Start";
+      focusSeconds = seconds;
+      initialFocusSeconds = seconds;
+      focusStatus.textContent = label;
+      focusClock.textContent = formatTime(focusSeconds);
+    }
+
+    document.getElementById('btn-proto-15').addEventListener('click', () => setFocusPreset(15 * 60, "ICAI 15M READING BUFFER"));
+    document.getElementById('btn-proto-25').addEventListener('click', () => setFocusPreset(25 * 60, "POMODORO READY"));
+    document.getElementById('btn-proto-90').addEventListener('click', () => setFocusPreset(90 * 60, "ULTRADIAN BLOCK READY"));
+    document.getElementById('btn-proto-180').addEventListener('click', () => setFocusPreset(180 * 60, "ICAI 3-HR SIMULATION"));
+
+    document.getElementById('btn-focus-reset').addEventListener('click', () => {
+      clearInterval(focusHandle);
+      isFocusActive = false;
+      btnFocusToggle.textContent = "Start";
+      focusSeconds = initialFocusSeconds;
+      focusStatus.textContent = "FOCUS READY";
+      focusClock.textContent = formatTime(focusSeconds);
+    });
 
     btnFocusToggle.addEventListener('click', () => {
       if (!isFocusActive) {
         isFocusActive = true;
         btnFocusToggle.textContent = "Pause";
-        focusStatus.textContent = "FOCUS • ACTIVE";
+        focusStatus.textContent = initialFocusSeconds === 10800 ? "ICAI EXAM SIMULATION IN PROGRESS" : "FOCUS • SPRINT ACTIVE";
         focusHandle = setInterval(() => {
           focusSeconds--;
+          totalStudySeconds++;
+          if (totalStudySeconds % 60 === 0) {
+            localStorage.setItem('iron_net_study_sec', totalStudySeconds.toString());
+            updateStudyDisplay();
+          }
+
           if (focusSeconds <= 0) {
             clearInterval(focusHandle);
             isFocusActive = false;
             btnFocusToggle.textContent = "Start";
-            focusStatus.textContent = "COMPLETE";
+            focusStatus.textContent = "SESSION COMPLETE";
             triggerChime(900);
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            triggerToast("Study Cycle Completed! Log your output.");
           }
           focusClock.textContent = formatTime(focusSeconds);
         }, 1000);
@@ -585,23 +609,8 @@
         clearInterval(focusHandle);
         isFocusActive = false;
         btnFocusToggle.textContent = "Start";
-        focusStatus.textContent = "FOCUS • PAUSED";
+        focusStatus.textContent = "SESSION PAUSED";
       }
-    });
-
-    document.getElementById('btn-proto-25').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60; focusStatus.textContent = "POMODORO READY"; focusClock.textContent = formatTime(focusSeconds);
-    });
-
-    document.getElementById('btn-proto-90').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 90 * 60; focusStatus.textContent = "ULTRADIAN READY"; focusClock.textContent = formatTime(focusSeconds);
-    });
-
-    document.getElementById('btn-focus-reset').addEventListener('click', () => {
-      clearInterval(focusHandle); isFocusActive = false; btnFocusToggle.textContent = "Start";
-      focusSeconds = 25 * 60; focusStatus.textContent = "FOCUS • READY"; focusClock.textContent = formatTime(focusSeconds);
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -612,11 +621,63 @@
       }
     });
 
-    // MULTI-MODE SYNTHESIZER (White, Brown, 40Hz Gamma)
+    // SPACED RETRIEVAL QUEUE (1-3-7-30 DAY ACTIVE RECALL)
+    let recallList = JSON.parse(localStorage.getItem('iron_recall_queue') || '[]');
+
+    function renderRecallQueue() {
+      revisionQueueEl.innerHTML = '';
+      if (recallList.length === 0) {
+        revisionQueueEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.75rem; text-align:center; padding:8px;">No provisions anchored yet.</div>';
+        return;
+      }
+      recallList.slice(0, 5).forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'revision-card';
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:700; font-size:0.8rem;">${item.topic}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${item.paper} • ${item.mode}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="provision-tag">Day ${item.interval}</span>
+            <button data-act="del-recall" data-idx="${idx}" style="background:none; border:none; color:var(--rose); cursor:pointer;">✕</button>
+          </div>
+        `;
+        revisionQueueEl.appendChild(div);
+      });
+    }
+
+    document.getElementById('btn-add-provision').addEventListener('click', () => {
+      const topic = focusAnchor.value.trim() || 'General Provision';
+      const paper = focusPaper.value;
+      recallList.unshift({
+        topic,
+        paper,
+        mode: studyMode,
+        date: new Date().toISOString(),
+        interval: 1
+      });
+      localStorage.setItem('iron_recall_queue', JSON.stringify(recallList));
+      focusAnchor.value = '';
+      renderRecallQueue();
+      triggerToast("Topic Anchored to Spaced Retrieval");
+    });
+
+    revisionQueueEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (btn && btn.dataset.act === 'del-recall') {
+        recallList.splice(parseInt(btn.dataset.idx, 10), 1);
+        localStorage.setItem('iron_recall_queue', JSON.stringify(recallList));
+        renderRecallQueue();
+      }
+    });
+
+    // MULTI-MODE SOUNDSCAPE (White, Brown, 40Hz Gamma)
     let audioCtx = null;
     let activeSource = null;
-    let soundMode = 0; // 0: OFF, 1: White Noise, 2: Brown Noise, 3: 40Hz Gamma
+    let soundMode = 0;
     const btnSoundscape = document.getElementById('btn-soundscape');
+    const audioModeLabel = document.getElementById('audio-mode-label');
 
     function stopAudio() {
       if (activeSource) {
@@ -633,9 +694,11 @@
       stopAudio();
 
       if (soundMode === 0) {
-        btnSoundscape.textContent = "Audio: OFF";
+        audioModeLabel.textContent = "OFF";
+        audioModeLabel.style.color = "var(--text-muted)";
       } else if (soundMode === 1) {
-        btnSoundscape.textContent = "White Noise";
+        audioModeLabel.textContent = "WHITE NOISE";
+        audioModeLabel.style.color = "var(--cyan)";
         const bufferSize = audioCtx.sampleRate * 2;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -647,7 +710,8 @@
         src.start();
         activeSource = src;
       } else if (soundMode === 2) {
-        btnSoundscape.textContent = "Brown Noise";
+        audioModeLabel.textContent = "BROWN NOISE (DEEP RUMBLE)";
+        audioModeLabel.style.color = "var(--gold)";
         const bufferSize = audioCtx.sampleRate * 2;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -665,14 +729,14 @@
         src.start();
         activeSource = src;
       } else if (soundMode === 3) {
-        btnSoundscape.textContent = "40Hz Gamma Focus";
+        audioModeLabel.textContent = "40Hz GAMMA ACTIVE RECALL";
+        audioModeLabel.style.color = "var(--emerald)";
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, audioCtx.currentTime); // Carrier tone
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
         gain.gain.value = 0.05;
 
-        // Modulate at 40Hz
         const lfo = audioCtx.createOscillator();
         const lfoGain = audioCtx.createGain();
         lfo.frequency.value = 40;
@@ -695,6 +759,7 @@
     inTargetCarb.value = dietTargets.carbs;
     inTargetFat.value = dietTargets.fats;
     syncDashboard();
+    renderRecallQueue();
   </script>
 </body>
 </html>
